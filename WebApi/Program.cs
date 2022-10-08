@@ -19,7 +19,7 @@ app.MapGet("/", () => "Hello World!");
 
 app.MapGet("/start", async (Service service) =>
 {
-    if (await service.TryStart(operation))
+    if (await service.TryStart(operation, app.Lifetime.ApplicationStopping))
     {
         return Results.Ok("Started");
     }

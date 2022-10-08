@@ -4,13 +4,16 @@ public sealed class Service : IDisposable
 {
     private bool running = false;
     private CancellationTokenSource? cts;
+    private CancellationTokenSource? combinedCts;
     private readonly SemaphoreSlim semaphore = new(1);
 
-    public async Task<bool> TryStart(Func<CancellationToken, Task> operation)
+    public async Task<bool> TryStart(Func<CancellationToken, Task> operation,
+        CancellationToken applicationStopping)
     {
         try
         {
-            await semaphore.WaitAsync();
+            await semaphore.WaitAsync(applicationStopping);
+            applicationStopping.ThrowIfCancellationRequested();
 
             if (running)
             {
@@ -19,7 +22,9 @@ public sealed class Service : IDisposable
 
             running = true;
             cts = new CancellationTokenSource();
-            _ = Task.Factory.StartNew(async () => await operation(cts.Token));
+            combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, applicationStopping);
+
+            _ = Task.Factory.StartNew(async () => await operation(combinedCts.Token));
 
             return true;
         }
@@ -54,5 +59,6 @@ public sealed class Service : IDisposable
     public void Dispose()
     {
         cts?.Dispose();
+        combinedCts?.Dispose();
     }
 }
