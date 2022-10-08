@@ -6,11 +6,21 @@ builder.Services.AddSingleton<Service>();
 
 static async Task operation(CancellationToken token)
 {
+    Console.Write("started ");
     while (!token.IsCancellationRequested)
     {
-        Console.Write(".");
-        await Task.Delay(200, token);
+        try
+        {
+            Console.Write(".");
+            await Task.Delay(200, token);
+        }
+        catch (TaskCanceledException)
+        {
+            // if token.IsCancellationRequested then Task.Delay will throw
+            // we ignore and simply let while loop finish
+        }
     }
+    Console.WriteLine(" stopped");
 }
 
 var app = builder.Build();
