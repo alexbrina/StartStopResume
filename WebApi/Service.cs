@@ -21,10 +21,9 @@ public sealed class Service : IDisposable
             }
 
             running = true;
-            cts = new CancellationTokenSource();
-            combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, applicationStopping);
+            RenewCancellationTokenSources(applicationStopping);
 
-            _ = Task.Factory.StartNew(async () => await operation(combinedCts.Token));
+            _ = Task.Factory.StartNew(async () => await operation(combinedCts!.Token));
 
             return true;
         }
@@ -32,6 +31,14 @@ public sealed class Service : IDisposable
         {
             semaphore.Release();
         }
+    }
+
+    private void RenewCancellationTokenSources(CancellationToken applicationStopping)
+    {
+        cts?.Dispose();
+        combinedCts?.Dispose();
+        cts = new CancellationTokenSource();
+        combinedCts = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, applicationStopping);
     }
 
     public async Task<bool> TryStop()
